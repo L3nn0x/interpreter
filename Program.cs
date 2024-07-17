@@ -8,10 +8,15 @@ namespace interpreter
 
         static void Main(string[] args)
         {
-            if (args.Length > 1)
+            if (args.Length > 2)
             {
                 Console.WriteLine("Usage: interpreter [script]");
                 Environment.Exit(64);
+            }
+            else if (args.Length == 2 && args[0] == "generate")
+            {
+                GenerateAst.GenerateAst.Generate(args[1..]);
+                return;
             }
             else if (args.Length == 1)
             {
