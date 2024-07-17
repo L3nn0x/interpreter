@@ -35,6 +35,7 @@ namespace interpreter
                 Start = Current;
                 ScanToken();
             }
+            Tokens.Add(new Token(TokenType.EOF, "", null, Line));
             return Tokens;
         }
 
@@ -179,8 +180,8 @@ namespace interpreter
                     Advance();
                     while (IsDigit(Peek())) Advance();
                 }
-                AddToken(TokenType.NUMBER, Double.Parse(Source[Start..Current]));
             }
+            AddToken(TokenType.NUMBER, Double.Parse(Source[Start..Current]));
         }
 
         private void Identifier()

@@ -24,9 +24,7 @@ namespace interpreter
             }
             else
             {
-                var expr = new Ast.Expr.Binary(new Ast.Expr.Unary(new Token(TokenType.MINUS, "-", null, 1), new Ast.Expr.Literal(123)), new Token(TokenType.STAR, "*", null, 1), new Ast.Expr.Grouping(new Ast.Expr.Literal(45.67)));
-                Console.WriteLine(new AstPrinter().Print(expr));
-                //RunPrompt();
+                RunPrompt();
             }
         }
 
@@ -57,6 +55,18 @@ namespace interpreter
             }
         }
 
+        static public void Error(Token token, string message)
+        {
+            if (token.type == TokenType.EOF)
+            {
+                Report(token.line, " at end", message);
+            }
+            else
+            {
+                Report(token.line, $"at '{token.lexeme}'", message);
+            }
+        }
+
         static public void Error(int line, string message)
         {
             Report(line, "", message);
@@ -72,11 +82,17 @@ namespace interpreter
         {
             Scanner scanner = new(source);
             List<Token> tokens = scanner.ScanTokens();
-
             foreach (Token token in tokens)
             {
                 Console.WriteLine(token.ToString());
             }
+            Parser parser = new(tokens);
+            Ast.Expr? expression = parser.Parse();
+            if (HadError || expression == null)
+            {
+                return;
+            }
+            Console.WriteLine(new AstPrinter().Print(expression!));
         }
     }
 }
