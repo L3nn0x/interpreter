@@ -24,7 +24,9 @@ namespace interpreter
             }
             else
             {
-                RunPrompt();
+                var expr = new Ast.Expr.Binary(new Ast.Expr.Unary(new Token(TokenType.MINUS, "-", null, 1), new Ast.Expr.Literal(123)), new Token(TokenType.STAR, "*", null, 1), new Ast.Expr.Grouping(new Ast.Expr.Literal(45.67)));
+                Console.WriteLine(new AstPrinter().Print(expr));
+                //RunPrompt();
             }
         }
 
