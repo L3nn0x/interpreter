@@ -1,2 +1,3 @@
 Ast/Expr.cs
-obj/*
+obj/
+bin/
