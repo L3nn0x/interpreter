@@ -82,17 +82,20 @@ namespace interpreter
         {
             Scanner scanner = new(source);
             List<Token> tokens = scanner.ScanTokens();
-            foreach (Token token in tokens)
+            /*foreach (Token t in tokens)
             {
-                Console.WriteLine(token.ToString());
-            }
+                Console.WriteLine(t.ToString());
+            }*/
             Parser parser = new(tokens);
             Ast.Expr? expression = parser.Parse();
             if (HadError || expression == null)
             {
                 return;
             }
-            Console.WriteLine(new AstPrinter().Print(expression!));
+            /* AstPrinter printer = new();
+            printer.Print(expression!); */
+            Interpreter interpreter = new();
+            interpreter.Interpret(expression!);
         }
     }
 }

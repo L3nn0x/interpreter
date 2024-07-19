@@ -175,12 +175,15 @@ namespace interpreter
         {
             while (IsDigit(Peek()) && !IsAtEnd())
             {
-                if (Peek() == '.' && IsDigit(PeekNext()))
-                {
-                    Advance();
-                    while (IsDigit(Peek())) Advance();
-                }
+                Advance();
             }
+
+            if (Peek() == '.' && IsDigit(PeekNext()))
+            {
+                Advance();
+                while (IsDigit(Peek())) Advance();
+            }
+
             AddToken(TokenType.NUMBER, Double.Parse(Source[Start..Current]));
         }
 
