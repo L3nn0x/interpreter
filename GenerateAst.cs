@@ -11,6 +11,7 @@ namespace GenerateAst
             }
             string output = args[0];
             DefineAst(output, "Expr", [
+                "Assign  : Token name, Expr value",
                 "Binary  : Expr Left, Token Op, Expr Right",
                 "Grouping: Expr Expression",
                 "Literal : object? Value",
@@ -18,6 +19,7 @@ namespace GenerateAst
                 "Variable: Token name"
             ]);
             DefineAst(output, "Stmt", [
+                "Block      : List<Stmt> statements",
                 "Expression : Expr expression",
                 "Print      : Expr expression",
                 "Var        : Token name, Expr? initializer"

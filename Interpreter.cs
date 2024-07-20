@@ -1,3 +1,4 @@
+using System.Collections;
 using Ast;
 namespace interpreter
 {
@@ -6,40 +7,32 @@ namespace interpreter
         public Token Token = token;
     }
 
-    public readonly struct Void : IEquatable<Void>
-    {
-        public static readonly Void unit;
-        public override readonly bool Equals(object? obj) => obj is Void;
-        public override readonly int GetHashCode() => 0;
-        public static bool operator ==(Void left, Void right) => left.Equals(right);
-        public static bool operator !=(Void left, Void right) => !(left == right);
-        public readonly bool Equals(Void other) => true;
-        public override readonly string ToString() => "()";
-    }
-
-    class Interpreter : Expr.IVisitor<object?>, Stmt.IVisitor<Void>
+    class Interpreter : Expr.IVisitor<object?>, Stmt.IVisitor<Option<object?>>
     {
         private Environment Env = new();
 
-        public void Interpret(List<Stmt?> statements)
+        public Option<object?> Interpret(List<Stmt?> statements)
         {
             try
             {
+                Option<object?> value = None.Value;
                 foreach (Stmt? statement in statements)
                 {
                     if (statement == null) continue;
-                    Execute(statement!);
+                    value = Execute(statement!);
                 }
+                return value;
             }
             catch (RuntimeException e)
             {
                 Program.Error(e.Token.line, e.Message);
             }
+            return None.Value;
         }
 
-        private void Execute(Stmt statement)
+        private Option<object?> Execute(Stmt statement)
         {
-            statement.Accept(this);
+            return statement.Accept(this);
         }
 
         private static string Stringify(object? value)
@@ -165,17 +158,16 @@ namespace interpreter
             throw new RuntimeException(op, "Operands must be numbers");
         }
 
-        public Void Visit(Stmt.Expression stmt)
+        public Option<object?> Visit(Stmt.Expression stmt)
         {
-            Evaluate(stmt.expression);
-            return Void.unit;
+            return Evaluate(stmt.expression);
         }
 
-        public Void Visit(Stmt.Print stmt)
+        public Option<object?> Visit(Stmt.Print stmt)
         {
             object? value = Evaluate(stmt.expression);
             Console.WriteLine(Stringify(value));
-            return Void.unit;
+            return None.Value;
         }
 
         public object? Visit(Expr.Variable expr)
@@ -183,14 +175,45 @@ namespace interpreter
             return Env.Get(expr.name);
         }
 
-        public Void Visit(Stmt.Var stmt)
+        public Option<object?> Visit(Stmt.Var stmt)
         {
             object? value = null;
-            if (stmt.initializer != null) {
+            if (stmt.initializer != null)
+            {
                 value = Evaluate(stmt.initializer);
             }
             Env.Define(stmt.name.lexeme, value);
-            return Void.unit;
+            return None.Value;
+        }
+
+        public object? Visit(Expr.Assign expr)
+        {
+            object? value = Evaluate(expr.value);
+            Env.Assign(expr.name, value);
+            return value;
+        }
+
+        public Option<object?> Visit(Stmt.Block stmt)
+        {
+            ExecuteBlock(stmt.statements, new Environment(Env));
+            return None.Value;
+        }
+
+        public void ExecuteBlock(List<Stmt> statements, Environment env)
+        {
+            Environment previous = Env;
+            try
+            {
+                Env = env;
+                foreach (Stmt stmt in statements)
+                {
+                    Execute(stmt);
+                }
+            }
+            finally
+            {
+                Env = previous;
+            }
         }
     }
 }

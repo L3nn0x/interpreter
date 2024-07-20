@@ -89,7 +89,7 @@ namespace interpreter
                 Console.WriteLine(t.ToString());
             }*/
             Parser parser = new(tokens);
-            List<Ast.Stmt?> statements = [];
+            List<Ast.Stmt?> statements;
             try
             {
                 statements = parser.Parse();
@@ -104,7 +104,11 @@ namespace interpreter
             }
             /* AstPrinter printer = new();
             printer.Print(expression!); */
-            interpreter.Interpret(statements);
+            Option<object?> value = interpreter.Interpret(statements);
+            if (value is Some<object?> some)
+            {
+                Console.WriteLine(some.Content);
+            }
         }
     }
 }

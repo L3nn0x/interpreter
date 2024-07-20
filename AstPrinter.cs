@@ -37,6 +37,11 @@ namespace interpreter
             return expr.name.lexeme;
         }
 
+        public string Visit(Expr.Assign expr)
+        {
+            return Parenthesize($"= {expr.name.lexeme}", expr.value);
+        }
+
         string Parenthesize(string name, params Expr[] exprs)
         {
             string s = $"({name}";

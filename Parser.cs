@@ -54,7 +54,24 @@ namespace interpreter
             {
                 return PrintStatement();
             }
+            if (Match(TokenType.LEFT_BRACE))
+            {
+                return new Stmt.Block(Block());
+            }
             return ExpressionStatement();
+        }
+
+        private List<Stmt> Block()
+        {
+            List<Stmt> statements = [];
+
+            while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
+            {
+                statements.Add(Declaration()!);
+            }
+            Consume(TokenType.RIGHT_BRACE, "Expected '}' at the end of the block");
+
+            return statements;
         }
 
         private Stmt PrintStatement()
@@ -78,7 +95,26 @@ namespace interpreter
 
         private Expr Expression()
         {
-            return Equality();
+            return Assignment();
+        }
+
+        private Expr Assignment()
+        {
+            Expr expr = Equality();
+
+            if (Match(TokenType.EQUAL))
+            {
+                Token equals = Previous();
+                Expr value = Assignment();
+
+                if (expr.GetType() == typeof(Expr.Variable))
+                {
+                    Token name = ((Expr.Variable)expr).name;
+                    return new Expr.Assign(name, value);
+                }
+                Error(equals, "Invalid assignment target");
+            }
+            return expr;
         }
 
         private Expr Equality()
