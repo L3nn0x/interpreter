@@ -6,19 +6,40 @@ namespace interpreter
         public Token Token = token;
     }
 
-    class Interpreter : Expr.IVisitor<object?>
+    public readonly struct Void : IEquatable<Void>
     {
-        public void Interpret(Expr expr)
+        public static readonly Void unit;
+        public override readonly bool Equals(object? obj) => obj is Void;
+        public override readonly int GetHashCode() => 0;
+        public static bool operator ==(Void left, Void right) => left.Equals(right);
+        public static bool operator !=(Void left, Void right) => !(left == right);
+        public readonly bool Equals(Void other) => true;
+        public override readonly string ToString() => "()";
+    }
+
+    class Interpreter : Expr.IVisitor<object?>, Stmt.IVisitor<Void>
+    {
+        private Environment Env = new();
+
+        public void Interpret(List<Stmt?> statements)
         {
             try
             {
-                object? value = Evaluate(expr);
-                Console.WriteLine(Stringify(value));
+                foreach (Stmt? statement in statements)
+                {
+                    if (statement == null) continue;
+                    Execute(statement!);
+                }
             }
             catch (RuntimeException e)
             {
                 Program.Error(e.Token.line, e.Message);
             }
+        }
+
+        private void Execute(Stmt statement)
+        {
+            statement.Accept(this);
         }
 
         private static string Stringify(object? value)
@@ -142,6 +163,34 @@ namespace interpreter
                 return;
             }
             throw new RuntimeException(op, "Operands must be numbers");
+        }
+
+        public Void Visit(Stmt.Expression stmt)
+        {
+            Evaluate(stmt.expression);
+            return Void.unit;
+        }
+
+        public Void Visit(Stmt.Print stmt)
+        {
+            object? value = Evaluate(stmt.expression);
+            Console.WriteLine(Stringify(value));
+            return Void.unit;
+        }
+
+        public object? Visit(Expr.Variable expr)
+        {
+            return Env.Get(expr.name);
+        }
+
+        public Void Visit(Stmt.Var stmt)
+        {
+            object? value = null;
+            if (stmt.initializer != null) {
+                value = Evaluate(stmt.initializer);
+            }
+            Env.Define(stmt.name.lexeme, value);
+            return Void.unit;
         }
     }
 }

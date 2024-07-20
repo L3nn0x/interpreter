@@ -8,16 +8,67 @@ namespace interpreter
         public List<Token> Tokens = Tokens;
         private int Current = 0;
 
-        public Expr? Parse()
+        public List<Stmt?> Parse()
+        {
+            List<Stmt?> statements = [];
+
+            while (!IsAtEnd())
+            {
+                statements.Add(Declaration());
+            }
+            return statements;
+        }
+
+        private Stmt? Declaration()
         {
             try
             {
-                return Expression();
+                if (Match(TokenType.VAR))
+                {
+                    return VarDeclaration();
+                }
+                return Statement();
             }
             catch (ParseError)
             {
+                Synchronize();
                 return null;
             }
+        }
+
+        private Stmt VarDeclaration()
+        {
+            Token name = Consume(TokenType.IDENTIFIER, "Expected variable name");
+            Expr? expr = null;
+            if (Match(TokenType.EQUAL))
+            {
+                expr = Expression();
+            }
+            Consume(TokenType.SEMICOLON, "Expected ';' after variable declaration");
+            return new Stmt.Var(name, expr);
+        }
+
+        private Stmt Statement()
+        {
+            if (Match(TokenType.PRINT))
+            {
+                return PrintStatement();
+            }
+            return ExpressionStatement();
+        }
+
+        private Stmt PrintStatement()
+        {
+            Expr expr = Expression();
+            Consume(TokenType.SEMICOLON, "Expected ';' after value");
+            return new Stmt.Print(expr);
+        }
+
+        private Stmt ExpressionStatement()
+        {
+            Expr expr = Expression();
+            Consume(TokenType.SEMICOLON, "Expected ';' after value");
+            return new Stmt.Expression(expr);
         }
 
         private bool IsAtEnd()
@@ -103,6 +154,7 @@ namespace interpreter
             {
                 return new Expr.Literal(Previous().literal);
             }
+            if (Match(TokenType.IDENTIFIER)) return new Expr.Variable(Previous());
             if (Match(TokenType.LEFT_PAREN))
             {
                 Expr expr = Expression();

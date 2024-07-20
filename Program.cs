@@ -6,12 +6,14 @@ namespace interpreter
     {
         static bool HadError = false;
 
+        static private Interpreter interpreter = new();
+
         static void Main(string[] args)
         {
             if (args.Length > 2)
             {
                 Console.WriteLine("Usage: interpreter [script]");
-                Environment.Exit(64);
+                System.Environment.Exit(64);
             }
             else if (args.Length == 2 && args[0] == "generate")
             {
@@ -36,7 +38,7 @@ namespace interpreter
             Run(contents);
             if (HadError)
             {
-                Environment.Exit(65);
+                System.Environment.Exit(65);
             }
         }
 
@@ -87,15 +89,22 @@ namespace interpreter
                 Console.WriteLine(t.ToString());
             }*/
             Parser parser = new(tokens);
-            Ast.Expr? expression = parser.Parse();
-            if (HadError || expression == null)
+            List<Ast.Stmt?> statements = [];
+            try
+            {
+                statements = parser.Parse();
+            }
+            catch (ParseError)
+            {
+                return;
+            }
+            if (HadError)
             {
                 return;
             }
             /* AstPrinter printer = new();
             printer.Print(expression!); */
-            Interpreter interpreter = new();
-            interpreter.Interpret(expression!);
+            interpreter.Interpret(statements);
         }
     }
 }
