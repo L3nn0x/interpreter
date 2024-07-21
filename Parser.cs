@@ -58,7 +58,25 @@ namespace interpreter
             {
                 return new Stmt.Block(Block());
             }
+            if (Match(TokenType.IF))
+            {
+                return If();
+            }
             return ExpressionStatement();
+        }
+
+        private Stmt If()
+        {
+            Consume(TokenType.LEFT_PAREN, "Expected '(' after if.");
+            Expr condition = Expression();
+            Consume(TokenType.RIGHT_PAREN, "Expected ')' after if condition.");
+            Stmt then_branch = Statement();
+            Stmt? else_branch = null;
+            if (Match(TokenType.ELSE))
+            {
+                else_branch = Statement();
+            }
+            return new Stmt.If(condition, then_branch, else_branch);
         }
 
         private List<Stmt> Block()
@@ -100,7 +118,7 @@ namespace interpreter
 
         private Expr Assignment()
         {
-            Expr expr = Equality();
+            Expr expr = Or();
 
             if (Match(TokenType.EQUAL))
             {
@@ -113,6 +131,32 @@ namespace interpreter
                     return new Expr.Assign(name, value);
                 }
                 Error(equals, "Invalid assignment target");
+            }
+            return expr;
+        }
+
+        private Expr Or()
+        {
+            Expr expr = And();
+
+            while (Match(TokenType.OR) && !IsAtEnd())
+            {
+                Token op = Previous();
+                Expr right = And();
+                expr = new Expr.Logical(expr, op, right);
+            }
+            return expr;
+        }
+
+        private Expr And()
+        {
+            Expr expr = Equality();
+
+            while (Match(TokenType.AND) && !IsAtEnd())
+            {
+                Token op = Previous();
+                Expr right = Equality();
+                expr = new Expr.Logical(expr, op, right);
             }
             return expr;
         }

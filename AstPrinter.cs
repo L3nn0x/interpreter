@@ -42,6 +42,11 @@ namespace interpreter
             return Parenthesize($"= {expr.name.lexeme}", expr.value);
         }
 
+        public string Visit(Expr.Logical expr)
+        {
+            return Parenthesize($"{expr.op.lexeme}", expr.left, expr.right);
+        }
+
         string Parenthesize(string name, params Expr[] exprs)
         {
             string s = $"({name}";

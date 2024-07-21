@@ -215,5 +215,32 @@ namespace interpreter
                 Env = previous;
             }
         }
+
+        public Option<object?> Visit(Stmt.If stmt)
+        {
+            if (IsTruhty(Evaluate(stmt.condition)))
+            {
+                Execute(stmt.then_branch);
+            }
+            else if (stmt.else_branch != null)
+            {
+                Execute(stmt.else_branch);
+            }
+            return None.Value;
+        }
+
+        public object? Visit(Expr.Logical expr)
+        {
+            object? left = Evaluate(expr.left);
+            if (expr.op.type == TokenType.OR)
+            {
+                if (IsTruhty(left)) return left;
+            }
+            else
+            {
+                if (!IsTruhty(left)) return left;
+            }
+            return Evaluate(expr.right);
+        }
     }
 }

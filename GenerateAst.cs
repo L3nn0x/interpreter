@@ -13,6 +13,7 @@ namespace GenerateAst
             DefineAst(output, "Expr", [
                 "Assign  : Token name, Expr value",
                 "Binary  : Expr Left, Token Op, Expr Right",
+                "Logical : Expr left, Token op, Expr right",
                 "Grouping: Expr Expression",
                 "Literal : object? Value",
                 "Unary   : Token Op, Expr Right",
@@ -21,6 +22,7 @@ namespace GenerateAst
             DefineAst(output, "Stmt", [
                 "Block      : List<Stmt> statements",
                 "Expression : Expr expression",
+                "If         : Expr condition, Stmt then_branch, Stmt? else_branch",
                 "Print      : Expr expression",
                 "Var        : Token name, Expr? initializer"
             ]);
