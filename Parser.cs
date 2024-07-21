@@ -62,7 +62,70 @@ namespace interpreter
             {
                 return If();
             }
+            if (Match(TokenType.WHILE))
+            {
+                return While();
+            }
+            if (Match(TokenType.FOR))
+            {
+                return For();
+            }
             return ExpressionStatement();
+        }
+
+        private Stmt For()
+        {
+            Consume(TokenType.LEFT_PAREN, "Expected '(' after for");
+            Stmt? initializer;
+            if (Match(TokenType.SEMICOLON))
+            {
+                initializer = null;
+            }
+            else if (Match(TokenType.VAR))
+            {
+                initializer = VarDeclaration();
+            }
+            else
+            {
+                initializer = ExpressionStatement();
+            }
+
+            Expr? condition = null;
+            if (!Check(TokenType.SEMICOLON))
+            {
+                condition = Expression();
+            }
+            Consume(TokenType.SEMICOLON, "Expected ';' after loop condition");
+
+            Expr? increment = null;
+            if (!Check(TokenType.RIGHT_PAREN))
+            {
+                increment = Expression();
+            }
+            Consume(TokenType.RIGHT_PAREN, "Expected ')' after for");
+            Stmt body = Statement();
+            if (increment != null)
+            {
+                body = new Stmt.Block([body, new Stmt.Expression(increment)]);
+            }
+            condition ??= new Expr.Literal(true);
+            body = new Stmt.While(condition, body);
+            if (initializer != null)
+            {
+                body = new Stmt.Block([initializer, body]);
+            }
+            return body;
+        }
+
+        private Stmt While()
+        {
+            Consume(TokenType.LEFT_PAREN, "Expected '(' after while");
+
+            Expr condition = Expression();
+
+            Consume(TokenType.RIGHT_PAREN, "Expected ')' after while condition");
+            Stmt body = Statement();
+            return new Stmt.While(condition, body);
         }
 
         private Stmt If()

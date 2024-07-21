@@ -242,5 +242,14 @@ namespace interpreter
             }
             return Evaluate(expr.right);
         }
+
+        public Option<object?> Visit(Stmt.While stmt)
+        {
+            while (IsTruhty(stmt.condition))
+            {
+                Execute(stmt.body);
+            }
+            return None.Value;
+        }
     }
 }
