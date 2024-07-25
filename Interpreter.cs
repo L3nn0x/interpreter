@@ -261,6 +261,10 @@ namespace interpreter
                     Evaluate(stmt.end_of_loop);
                 }
             }
+            if (stmt.final != null)
+            {
+                Execute(stmt.final);
+            }
             return None.Value;
         }
 

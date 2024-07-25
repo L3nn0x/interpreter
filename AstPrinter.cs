@@ -81,7 +81,7 @@ namespace interpreter
 
         public string Visit(Stmt.While stmt)
         {
-            return $"(WHILE {stmt.condition.Accept(this)} {stmt.body.Accept(this)})";
+            return $"(WHILE COND {stmt.condition.Accept(this)} BODY {stmt.body.Accept(this)}) INC {(stmt.end_of_loop == null ? "" : stmt.end_of_loop.Accept(this))} FINALLY {(stmt.final == null ? "" : stmt.final.Accept(this))}";
         }
 
         public string Visit(Stmt.Break stmt)

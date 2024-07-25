@@ -20,7 +20,8 @@ namespace interpreter
         {"var", TokenType.VAR},
         {"while", TokenType.WHILE},
         {"continue", TokenType.CONTINUE},
-        {"break", TokenType.BREAK}
+        {"break", TokenType.BREAK},
+        {"finally", TokenType.FINALLY},
     };
 
 

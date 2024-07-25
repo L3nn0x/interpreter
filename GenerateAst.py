@@ -65,7 +65,7 @@ if __name__ == "__main__":
         "If         : Expr condition, Stmt then_branch, Stmt? else_branch",
         "Print      : Expr expression",
         "Var        : Token name, Expr? initializer",
-        "While      : Expr condition, Stmt body, Expr? end_of_loop",
+        "While      : Expr condition, Stmt body, Expr? end_of_loop, Stmt? final",
         "Break      :",
         "Continue   :",
     ])
