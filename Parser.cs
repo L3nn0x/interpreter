@@ -134,12 +134,8 @@ namespace interpreter
             }
             Consume(TokenType.RIGHT_PAREN, "Expected ')' after for");
             Stmt body = Statement(true);
-            if (increment != null)
-            {
-                body = new Stmt.Block([body, new Stmt.Expression(increment)]);
-            }
             condition ??= new Expr.Literal(true);
-            body = new Stmt.While(condition, body);
+            body = new Stmt.While(condition, body, increment);
             if (initializer != null)
             {
                 body = new Stmt.Block([initializer, body]);
@@ -155,7 +151,7 @@ namespace interpreter
 
             Consume(TokenType.RIGHT_PAREN, "Expected ')' after while condition");
             Stmt body = Statement(true);
-            return new Stmt.While(condition, body);
+            return new Stmt.While(condition, body, null);
         }
 
         private Stmt If(bool is_in_loop)

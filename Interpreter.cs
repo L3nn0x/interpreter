@@ -256,6 +256,10 @@ namespace interpreter
                 {
                     break;
                 }
+                if (stmt.end_of_loop != null)
+                {
+                    Evaluate(stmt.end_of_loop);
+                }
             }
             return None.Value;
         }
