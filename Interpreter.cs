@@ -7,15 +7,15 @@ namespace interpreter
         public Token Token = token;
     }
 
-    class Interpreter : Expr.IVisitor<object?>, Stmt.IVisitor<Option<object?>>
+    class Interpreter : Expr.IVisitor<object?>, Stmt.IVisitor<Option>
     {
         private Environment Env = new();
 
-        public Option<object?> Interpret(List<Stmt?> statements)
+        public Option Interpret(List<Stmt?> statements)
         {
             try
             {
-                Option<object?> value = None.Value;
+                Option value = None.Value;
                 foreach (Stmt? statement in statements)
                 {
                     if (statement == null) continue;
@@ -30,7 +30,7 @@ namespace interpreter
             return None.Value;
         }
 
-        private Option<object?> Execute(Stmt statement)
+        private Option Execute(Stmt statement)
         {
             return statement.Accept(this);
         }
@@ -158,12 +158,12 @@ namespace interpreter
             throw new RuntimeException(op, "Operands must be numbers");
         }
 
-        public Option<object?> Visit(Stmt.Expression stmt)
+        public Option Visit(Stmt.Expression stmt)
         {
-            return Evaluate(stmt.expression);
+            return new Some(Evaluate(stmt.expression));
         }
 
-        public Option<object?> Visit(Stmt.Print stmt)
+        public Option Visit(Stmt.Print stmt)
         {
             object? value = Evaluate(stmt.expression);
             Console.WriteLine(Stringify(value));
@@ -175,7 +175,7 @@ namespace interpreter
             return Env.Get(expr.name);
         }
 
-        public Option<object?> Visit(Stmt.Var stmt)
+        public Option Visit(Stmt.Var stmt)
         {
             object? value = null;
             if (stmt.initializer != null)
@@ -193,13 +193,12 @@ namespace interpreter
             return value;
         }
 
-        public Option<object?> Visit(Stmt.Block stmt)
+        public Option Visit(Stmt.Block stmt)
         {
-            ExecuteBlock(stmt.statements, new Environment(Env));
-            return None.Value;
+            return ExecuteBlock(stmt.statements, new Environment(Env));
         }
 
-        public void ExecuteBlock(List<Stmt> statements, Environment env)
+        public Option ExecuteBlock(List<Stmt> statements, Environment env)
         {
             Environment previous = Env;
             try
@@ -207,24 +206,29 @@ namespace interpreter
                 Env = env;
                 foreach (Stmt stmt in statements)
                 {
-                    Execute(stmt);
+                    Option value = Execute(stmt);
+                    if (value.GetType() == typeof(Continue) || value.GetType() == typeof(Break))
+                    {
+                        return value;
+                    }
                 }
             }
             finally
             {
                 Env = previous;
             }
+            return None.Value;
         }
 
-        public Option<object?> Visit(Stmt.If stmt)
+        public Option Visit(Stmt.If stmt)
         {
             if (IsTruhty(Evaluate(stmt.condition)))
             {
-                Execute(stmt.then_branch);
+                return Execute(stmt.then_branch);
             }
             else if (stmt.else_branch != null)
             {
-                Execute(stmt.else_branch);
+                return Execute(stmt.else_branch);
             }
             return None.Value;
         }
@@ -243,13 +247,27 @@ namespace interpreter
             return Evaluate(expr.right);
         }
 
-        public Option<object?> Visit(Stmt.While stmt)
+        public Option Visit(Stmt.While stmt)
         {
-            while (IsTruhty(stmt.condition))
+            while (IsTruhty(Evaluate(stmt.condition)))
             {
-                Execute(stmt.body);
+                Option value = Execute(stmt.body);
+                if (value.GetType() == typeof(Break))
+                {
+                    break;
+                }
             }
             return None.Value;
+        }
+
+        public Option Visit(Stmt.Break stmt)
+        {
+            return new Break();
+        }
+
+        public Option Visit(Stmt.Continue stmt)
+        {
+            return new Continue();
         }
     }
 }

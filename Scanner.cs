@@ -19,6 +19,8 @@ namespace interpreter
         {"true", TokenType.TRUE},
         {"var", TokenType.VAR},
         {"while", TokenType.WHILE},
+        {"continue", TokenType.CONTINUE},
+        {"break", TokenType.BREAK}
     };
 
 

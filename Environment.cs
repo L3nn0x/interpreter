@@ -32,7 +32,7 @@ namespace interpreter
         {
             if (Values.ContainsKey(name.lexeme))
             {
-                Values.Add(name.lexeme, value);
+                Values[name.lexeme] = value;
             }
             else
             {

@@ -15,11 +15,6 @@ namespace interpreter
                 Console.WriteLine("Usage: interpreter [script]");
                 System.Environment.Exit(64);
             }
-            else if (args.Length == 2 && args[0] == "generate")
-            {
-                GenerateAst.GenerateAst.Generate(args[1..]);
-                return;
-            }
             else if (args.Length == 1)
             {
                 RunFile(args[0]);
@@ -102,12 +97,15 @@ namespace interpreter
             {
                 return;
             }
-            /* AstPrinter printer = new();
-            printer.Print(expression!); */
-            Option<object?> value = interpreter.Interpret(statements);
-            if (value is Some<object?> some)
+            /*AstPrinter printer = new();
+            foreach (var s in statements)
             {
-                Console.WriteLine(some.Content);
+                Console.WriteLine(printer.Print(s!));
+            }*/
+            Option value = interpreter.Interpret(statements);
+            if (value.GetType() == typeof(Some))
+            {
+                Console.WriteLine(((Some)value).Content);
             }
         }
     }

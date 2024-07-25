@@ -2,11 +2,11 @@ using Ast;
 
 namespace interpreter
 {
-    class AstPrinter : Expr.IVisitor<string>
+    class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
     {
-        public string Print(Expr expr)
+        public string Print(Stmt stmt)
         {
-            return expr.Accept(this);
+            return stmt.Accept(this);
         }
         public string Visit(Expr.Binary expr)
         {
@@ -45,6 +45,53 @@ namespace interpreter
         public string Visit(Expr.Logical expr)
         {
             return Parenthesize($"{expr.op.lexeme}", expr.left, expr.right);
+        }
+
+        public string Visit(Stmt.Block stmt)
+        {
+            string res = "(BLOCK ";
+            foreach (var s in stmt.statements)
+            {
+                res += s.Accept(this) + " ";
+            }
+            return res[..(res.Length - 1)] + ")";
+        }
+
+        public string Visit(Stmt.Expression stmt)
+        {
+            return stmt.expression.Accept(this);
+        }
+
+        public string Visit(Stmt.If stmt)
+        {
+            string left = stmt.then_branch.Accept(this);
+            string right = stmt.else_branch == null ? "null" : stmt.else_branch.Accept(this);
+            return $"(IF {left} {right})";
+        }
+
+        public string Visit(Stmt.Print stmt)
+        {
+            return $"(PRINT {stmt.expression.Accept(this)})";
+        }
+
+        public string Visit(Stmt.Var stmt)
+        {
+            return $"(VAR {stmt.name} {(stmt.initializer == null ? "null" : stmt.initializer.Accept(this))})";
+        }
+
+        public string Visit(Stmt.While stmt)
+        {
+            return $"(WHILE {stmt.condition.Accept(this)} {stmt.body.Accept(this)})";
+        }
+
+        public string Visit(Stmt.Break stmt)
+        {
+            return "(BREAK)";
+        }
+
+        public string Visit(Stmt.Continue stmt)
+        {
+            return "(CONTINUE)";
         }
 
         string Parenthesize(string name, params Expr[] exprs)

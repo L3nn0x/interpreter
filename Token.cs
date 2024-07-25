@@ -9,7 +9,7 @@ namespace interpreter
         // literals
         IDENTIFIER, STRING, NUMBER,
         // keywords
-        AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR, PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE, EOF
+        AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR, PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE, BREAK, CONTINUE, EOF
     }
 
     public class Token(TokenType type, string lexeme, object? literal, int line)

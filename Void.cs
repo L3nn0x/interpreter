@@ -10,5 +10,4 @@ namespace interpreter
         public readonly bool Equals(Void other) => true;
         public override readonly string ToString() => "()";
     }
-
 }

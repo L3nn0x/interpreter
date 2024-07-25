@@ -14,12 +14,12 @@ namespace interpreter
 
             while (!IsAtEnd())
             {
-                statements.Add(Declaration());
+                statements.Add(Declaration(false));
             }
             return statements;
         }
 
-        private Stmt? Declaration()
+        private Stmt? Declaration(bool is_in_loop)
         {
             try
             {
@@ -27,7 +27,7 @@ namespace interpreter
                 {
                     return VarDeclaration();
                 }
-                return Statement();
+                return Statement(is_in_loop);
             }
             catch (ParseError)
             {
@@ -48,7 +48,7 @@ namespace interpreter
             return new Stmt.Var(name, expr);
         }
 
-        private Stmt Statement()
+        private Stmt Statement(bool is_in_loop)
         {
             if (Match(TokenType.PRINT))
             {
@@ -56,11 +56,11 @@ namespace interpreter
             }
             if (Match(TokenType.LEFT_BRACE))
             {
-                return new Stmt.Block(Block());
+                return new Stmt.Block(Block(is_in_loop));
             }
             if (Match(TokenType.IF))
             {
-                return If();
+                return If(is_in_loop);
             }
             if (Match(TokenType.WHILE))
             {
@@ -70,7 +70,37 @@ namespace interpreter
             {
                 return For();
             }
+            if (Match(TokenType.BREAK))
+            {
+                return Break(is_in_loop);
+            }
+            if (Match(TokenType.CONTINUE))
+            {
+                return Continue(is_in_loop);
+            }
             return ExpressionStatement();
+        }
+
+        private Stmt Break(bool is_in_loop)
+        {
+            if (!is_in_loop)
+            {
+                Token b = Previous();
+                Error(b, "break can only appear in a loop body");
+            }
+            Consume(TokenType.SEMICOLON, "Expected ';' after break");
+            return new Stmt.Break();
+        }
+
+        private Stmt Continue(bool is_in_loop)
+        {
+            if (!is_in_loop)
+            {
+                Token c = Previous();
+                Error(c, "continue can only appear in a loop body");
+            }
+            Consume(TokenType.SEMICOLON, "Expected ';' after continue");
+            return new Stmt.Continue();
         }
 
         private Stmt For()
@@ -103,7 +133,7 @@ namespace interpreter
                 increment = Expression();
             }
             Consume(TokenType.RIGHT_PAREN, "Expected ')' after for");
-            Stmt body = Statement();
+            Stmt body = Statement(true);
             if (increment != null)
             {
                 body = new Stmt.Block([body, new Stmt.Expression(increment)]);
@@ -124,31 +154,31 @@ namespace interpreter
             Expr condition = Expression();
 
             Consume(TokenType.RIGHT_PAREN, "Expected ')' after while condition");
-            Stmt body = Statement();
+            Stmt body = Statement(true);
             return new Stmt.While(condition, body);
         }
 
-        private Stmt If()
+        private Stmt If(bool is_in_loop)
         {
             Consume(TokenType.LEFT_PAREN, "Expected '(' after if.");
             Expr condition = Expression();
             Consume(TokenType.RIGHT_PAREN, "Expected ')' after if condition.");
-            Stmt then_branch = Statement();
+            Stmt then_branch = Statement(is_in_loop);
             Stmt? else_branch = null;
             if (Match(TokenType.ELSE))
             {
-                else_branch = Statement();
+                else_branch = Statement(is_in_loop);
             }
             return new Stmt.If(condition, then_branch, else_branch);
         }
 
-        private List<Stmt> Block()
+        private List<Stmt> Block(bool is_in_loop)
         {
             List<Stmt> statements = [];
 
             while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
             {
-                statements.Add(Declaration()!);
+                statements.Add(Declaration(is_in_loop)!);
             }
             Consume(TokenType.RIGHT_BRACE, "Expected '}' at the end of the block");
 
@@ -326,6 +356,8 @@ namespace interpreter
                     case TokenType.WHILE:
                     case TokenType.PRINT:
                     case TokenType.RETURN:
+                    case TokenType.CONTINUE:
+                    case TokenType.BREAK:
                         return;
                 }
 
