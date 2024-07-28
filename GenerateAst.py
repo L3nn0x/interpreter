@@ -53,6 +53,7 @@ if __name__ == "__main__":
     define_ast(dir, "Expr", [
         "Assign  : Token name, Expr value",
         "Binary  : Expr Left, Token Op, Expr Right",
+        "Call    : Expr callee, Token paren, List<Expr> args",
         "Logical : Expr left, Token op, Expr right",
         "Grouping: Expr Expression",
         "Literal : object? Value",
@@ -62,8 +63,10 @@ if __name__ == "__main__":
     define_ast(dir, "Stmt", [
         "Block      : List<Stmt> statements",
         "Expression : Expr expression",
+        "Function   : Token name, List<Token> args, List<Stmt> body",
         "If         : Expr condition, Stmt then_branch, Stmt? else_branch",
         "Print      : Expr expression",
+        "Return     : Token keyword, Expr? value",
         "Var        : Token name, Expr? initializer",
         "While      : Expr condition, Stmt body, Expr? end_of_loop, Stmt? final",
         "Break      :",

@@ -7,9 +7,22 @@ namespace interpreter
         public Token Token = token;
     }
 
-    class Interpreter : Expr.IVisitor<object?>, Stmt.IVisitor<Option>
+    class Return(Option value) : Exception
     {
-        private Environment Env = new();
+        public readonly Option Value = value;
+    }
+
+    class Interpreter : Expr.IVisitor<Option>, Stmt.IVisitor<Option>
+    {
+        private Environment Globals = new();
+        private Environment Env;
+
+        public Interpreter()
+        {
+            Globals.Define("clock", new Clock());
+            Globals.Define("input", new Input());
+            Env = new(Globals);
+        }
 
         public Option Interpret(List<Stmt?> statements)
         {
@@ -35,70 +48,77 @@ namespace interpreter
             return statement.Accept(this);
         }
 
-        private static string Stringify(object? value)
+        private static string Stringify(Option value)
         {
-            if (value == null) return "nil";
-            if (value!.GetType() == typeof(Double))
+            if (value is None) return "";
+            Some v = (Some)value;
+            if (v.Content == null) return "nil";
+            if (v.Content.GetType() == typeof(Double))
             {
-                string text = value!.ToString()!;
+                string text = v.Content!.ToString()!;
                 if (text.EndsWith(".0"))
                 {
-                    text = text.Substring(0, text.Length - 2);
+                    text = text[..^2];
                 }
                 return text;
             }
-            return value!.ToString()!;
+            return v.Content!.ToString()!;
         }
 
-        private object? Evaluate(Expr expr)
+        private Option Evaluate(Expr expr)
         {
             return expr.Accept(this);
         }
 
-        public object? Visit(Expr.Binary expr)
+        public Option Visit(Expr.Binary expr)
         {
-            object? left = Evaluate(expr.Left);
-            object? right = Evaluate(expr.Right);
+            Option left = Evaluate(expr.Left);
+            Option right = Evaluate(expr.Right);
+
+            U apply<T, U>(Func<T, T, U> fn) => fn((T)((Some)left).Content!, (T)((Some)right).Content!);
 
             switch (expr.Op.type)
             {
                 case TokenType.MINUS:
                     CheckNumberOperands(expr.Op, left, right);
-                    return (double)left! - (double)right!;
+                    return new Some(apply<double, double>((a, b) => a - b));
                 case TokenType.SLASH:
                     CheckNumberOperands(expr.Op, left, right);
-                    return (double)left! / (double)right!;
+                    return new Some(apply<double, double>((a, b) => a / b));
                 case TokenType.STAR:
                     CheckNumberOperands(expr.Op, left, right);
-                    return (double)left! * (double)right!;
+                    return new Some(apply<double, double>((a, b) => a * b));
                 case TokenType.PLUS:
-                    if (left!.GetType() == typeof(double) && right!.GetType() == typeof(double))
+                    if (left is Some sleft && right is Some sright)
                     {
-                        return (double)left! + (double)right!;
-                    }
-                    if (left!.GetType() == typeof(string) && right!.GetType() == typeof(string))
-                    {
-                        return (string)left! + (string)right!;
+                        if (sleft.Content!.GetType() == typeof(double) && sright.Content!.GetType() == typeof(double))
+                        {
+                            return new Some(apply<double, double>((a, b) => a + b));
+                        }
+                        if (sleft.Content!.GetType() == typeof(string) && sright.Content!.GetType() == typeof(string))
+                        {
+                            return new Some(apply<string, string>((a, b) => a + b));
+                        }
                     }
                     throw new RuntimeException(expr.Op, "Operands must be numbers or strings");
                 case TokenType.GREATER:
                     CheckNumberOperands(expr.Op, left, right);
-                    return (double)left! > (double)right!;
+                    return new Some(apply<double, bool>((a, b) => a > b));
                 case TokenType.GREATER_EQUAL:
                     CheckNumberOperands(expr.Op, left, right);
-                    return (double)left! >= (double)right!;
+                    return new Some(apply<double, bool>((a, b) => a >= b));
                 case TokenType.LESS:
                     CheckNumberOperands(expr.Op, left, right);
-                    return (double)left! < (double)right!;
+                    return new Some(apply<double, bool>((a, b) => a < b));
                 case TokenType.LESS_EQUAL:
                     CheckNumberOperands(expr.Op, left, right);
-                    return (double)left! <= (double)right!;
+                    return new Some(apply<double, bool>((a, b) => a <= b));
                 case TokenType.BANG_EQUAL:
-                    return !IsEqual(left, right);
+                    return new Some(!IsEqual(left, right));
                 case TokenType.EQUAL_EQUAL:
-                    return IsEqual(left, right);
+                    return new Some(IsEqual(left, right));
             }
-            return null;
+            return None.Value;
         }
 
         private static bool IsEqual(object? left, object? right)
@@ -108,89 +128,111 @@ namespace interpreter
             return left.Equals(right);
         }
 
-        public object? Visit(Expr.Grouping expr)
+        public Option Visit(Expr.Grouping expr)
         {
             return Evaluate(expr.Expression);
         }
 
-        public object? Visit(Expr.Literal expr)
+        public Option Visit(Expr.Literal expr)
         {
-            return expr.Value;
+            return new Some(expr.Value);
         }
 
-        public object? Visit(Expr.Unary expr)
+        public Option Visit(Expr.Unary expr)
         {
-            object? right = Evaluate(expr.Right);
+            Option right = Evaluate(expr.Right);
 
             switch (expr.Op.type)
             {
                 case TokenType.MINUS:
                     CheckNumberOperand(expr.Op, right);
-                    return -(double?)right;
-                case TokenType.BANG: return !IsTruhty(right);
+                    return new Some(-(double?)((Some)right).Content);
+                case TokenType.BANG: return new Some(!IsTruhty(right));
             }
-            return null;
+            return None.Value;
         }
 
-        public static bool IsTruhty(object? value)
+        public static bool IsTruhty(Option value)
         {
-            if (value == null) return false;
-            if (value!.GetType() == typeof(bool)) return (bool)value!;
-            if (value!.GetType() == typeof(double)) return ((double)value!) != 0;
+            if (value.GetType() == typeof(None)) return false;
+            Some v = (Some)value;
+            if (v.Content == null) return false;
+            if (v.Content.GetType() == typeof(bool)) return (bool)v.Content;
+            if (v.Content.GetType() == typeof(double)) return ((double)v.Content) != 0;
             return true;
         }
 
-        public static void CheckNumberOperand(Token op, object? operand)
+        public static void CheckNumberOperand(Token op, Option operand)
         {
-            if (operand != null && operand!.GetType() == typeof(Double))
+            if (operand is Some some)
             {
-                return;
+                if (some.Content != null && some.Content.GetType() == typeof(Double))
+                {
+                    return;
+                }
             }
             throw new RuntimeException(op, "Operand must be a number");
         }
 
-        public static void CheckNumberOperands(Token op, object? left, object? right)
+        public static void CheckNumberOperands(Token op, Option left, Option right)
         {
-            if (left != null && right != null && left!.GetType() == typeof(Double) && right!.GetType() == typeof(Double))
+            if ((left is Some lsome) && (right is Some rsome))
             {
-                return;
+                if (lsome.Content != null && rsome.Content != null && lsome.Content.GetType() == typeof(Double) && rsome.Content.GetType() == typeof(Double))
+                {
+                    return;
+                }
             }
             throw new RuntimeException(op, "Operands must be numbers");
         }
 
         public Option Visit(Stmt.Expression stmt)
         {
-            return new Some(Evaluate(stmt.expression));
+            return Evaluate(stmt.expression);
         }
 
         public Option Visit(Stmt.Print stmt)
         {
-            object? value = Evaluate(stmt.expression);
+            Option value = Evaluate(stmt.expression);
             Console.WriteLine(Stringify(value));
             return None.Value;
         }
 
-        public object? Visit(Expr.Variable expr)
+        public Option Visit(Expr.Variable expr)
         {
-            return Env.Get(expr.name);
+            return new Some(Env.Get(expr.name));
         }
 
         public Option Visit(Stmt.Var stmt)
         {
-            object? value = null;
+            Option value = None.Value;
             if (stmt.initializer != null)
             {
                 value = Evaluate(stmt.initializer);
             }
-            Env.Define(stmt.name.lexeme, value);
+            if (value is Some some)
+            {
+                Env.Define(stmt.name.lexeme, some.Content);
+            }
+            else
+            {
+                throw new RuntimeException(stmt.name, "Cannot assign None to variable");
+            }
             return None.Value;
         }
 
-        public object? Visit(Expr.Assign expr)
+        public Option Visit(Expr.Assign expr)
         {
-            object? value = Evaluate(expr.value);
-            Env.Assign(expr.name, value);
-            return value;
+            Option value = Evaluate(expr.value);
+            if (value is Some some)
+            {
+                Env.Assign(expr.name, some.Content);
+                return value;
+            }
+            else
+            {
+                throw new RuntimeException(expr.name, "Cannot assign None to variable");
+            }
         }
 
         public Option Visit(Stmt.Block stmt)
@@ -233,9 +275,9 @@ namespace interpreter
             return None.Value;
         }
 
-        public object? Visit(Expr.Logical expr)
+        public Option Visit(Expr.Logical expr)
         {
-            object? left = Evaluate(expr.left);
+            Option left = Evaluate(expr.left);
             if (expr.op.type == TokenType.OR)
             {
                 if (IsTruhty(left)) return left;
@@ -276,6 +318,59 @@ namespace interpreter
         public Option Visit(Stmt.Continue stmt)
         {
             return new Continue();
+        }
+
+        public Option Visit(Expr.Call expr)
+        {
+            Option callee = Evaluate(expr.callee);
+            if (callee is Some some)
+            {
+                object value = some.Content ?? throw new RuntimeException(expr.paren, "Cannnot call null");
+                if (value is not LoxCallable)
+                {
+                    throw new RuntimeException(expr.paren, "Cannot call a non-callable object.");
+                }
+                List<object?> args = [];
+                foreach (var arg in expr.args)
+                {
+                    Option aa = Evaluate(arg);
+                    if (aa is Some sarg)
+                    {
+                        args.Add(sarg.Content);
+                    }
+                    else
+                    {
+                        throw new RuntimeException(expr.paren, "Cannot pass None argument to call");
+                    }
+                }
+                LoxCallable callable = (LoxCallable)value;
+                if (args.Count != callable.Arity())
+                {
+                    throw new RuntimeException(expr.paren, $"Expected {callable.Arity()} arguments but got {args.Count}.");
+                }
+                return callable.CallFunction(this, args);
+            }
+            else
+            {
+                throw new RuntimeException(expr.paren, "Cannot call null");
+            }
+        }
+
+        public Option Visit(Stmt.Function stmt)
+        {
+            LoxFunction func = new(stmt, Env);
+            Env.Define(stmt.name.lexeme, func);
+            return None.Value;
+        }
+
+        public Option Visit(Stmt.Return stmt)
+        {
+            Option value = None.Value;
+            if (stmt.value != null)
+            {
+                value = Evaluate(stmt.value);
+            }
+            throw new Return(value);
         }
     }
 }

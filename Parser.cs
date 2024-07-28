@@ -23,6 +23,10 @@ namespace interpreter
         {
             try
             {
+                if (Match(TokenType.FUN))
+                {
+                    return Function("function");
+                }
                 if (Match(TokenType.VAR))
                 {
                     return VarDeclaration();
@@ -34,6 +38,27 @@ namespace interpreter
                 Synchronize();
                 return null;
             }
+        }
+
+        private Stmt Function(string kind)
+        {
+            Token name = Consume(TokenType.IDENTIFIER, $"Expected {kind} name.");
+            Consume(TokenType.LEFT_PAREN, $"Expected '(' after {kind} name.");
+            List<Token> parameters = [];
+            if (!Check(TokenType.RIGHT_PAREN))
+            {
+                do
+                {
+                    if (parameters.Count > 254)
+                    {
+                        Error(Peek(), "Cannot have more than 255 parameters.");
+                    }
+                    parameters.Add(Consume(TokenType.IDENTIFIER, "Expected parameter name"));
+                } while (Match(TokenType.COMMA));
+            }
+            Consume(TokenType.RIGHT_PAREN, "Expected ')' after parameters");
+            Consume(TokenType.LEFT_BRACE, $"Expected '{{' before {kind} body.");
+            return new Stmt.Function(name, parameters, Block(false));
         }
 
         private Stmt VarDeclaration()
@@ -53,6 +78,10 @@ namespace interpreter
             if (Match(TokenType.PRINT))
             {
                 return PrintStatement();
+            }
+            if (Match(TokenType.RETURN))
+            {
+                return ReturnStatement();
             }
             if (Match(TokenType.LEFT_BRACE))
             {
@@ -79,6 +108,18 @@ namespace interpreter
                 return Continue(is_in_loop);
             }
             return ExpressionStatement();
+        }
+
+        private Stmt ReturnStatement()
+        {
+            Token keyword = Previous();
+            Expr? value = null;
+            if (!Check(TokenType.SEMICOLON))
+            {
+                value = Expression();
+            }
+            Consume(TokenType.SEMICOLON, "Expected ';' after return");
+            return new Stmt.Return(keyword, value);
         }
 
         private Stmt Break(bool is_in_loop)
@@ -323,7 +364,43 @@ namespace interpreter
                 Expr right = Unary();
                 return new Expr.Unary(op, right);
             }
-            return Primary();
+            return Call();
+        }
+
+        private Expr Call()
+        {
+            Expr expr = Primary();
+
+            while (true)
+            {
+                if (Match(TokenType.LEFT_PAREN))
+                {
+                    expr = FinishCall(expr);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return expr;
+        }
+
+        private Expr FinishCall(Expr expr)
+        {
+            List<Expr> args = [];
+            if (!Check(TokenType.RIGHT_PAREN))
+            {
+                do
+                {
+                    if (args.Count > 254)
+                    {
+                        Error(Peek(), "Can't have more than 255 arguments.");
+                    }
+                    args.Add(Expression());
+                } while (Match(TokenType.COMMA));
+            }
+            Token paren = Consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.");
+            return new Expr.Call(expr, paren, args);
         }
 
         private Expr Primary()
@@ -366,6 +443,7 @@ namespace interpreter
                     case TokenType.RETURN:
                     case TokenType.CONTINUE:
                     case TokenType.BREAK:
+                    case TokenType.FINALLY:
                         return;
                 }
 

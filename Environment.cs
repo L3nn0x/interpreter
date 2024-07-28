@@ -1,6 +1,6 @@
 namespace interpreter
 {
-    class Environment
+    public class Environment
     {
         public Environment() { }
         public Environment(Environment parent)

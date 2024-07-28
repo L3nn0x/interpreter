@@ -94,6 +94,36 @@ namespace interpreter
             return "(CONTINUE)";
         }
 
+        public string Visit(Expr.Call expr)
+        {
+            string args = "";
+            foreach (var arg in expr.args)
+            {
+                args += " " + arg.Accept(this);
+            }
+            return $"(CALL {expr.callee.Accept(this)} {args})";
+        }
+
+        public string Visit(Stmt.Function stmt)
+        {
+            string args = "";
+            foreach (var arg in stmt.args)
+            {
+                args += " " + arg.lexeme;
+            }
+            string stmts = "";
+            foreach (var s in stmt.body)
+            {
+                stmts += " " + s.Accept(this);
+            }
+            return $"(FUN {stmt.name.lexeme} ARGS {args} BODY {stmts})";
+        }
+
+        public string Visit(Stmt.Return stmt)
+        {
+            return $"(RET {(stmt.value == null ? stmt.value!.Accept(this) : "nil")})";
+        }
+
         string Parenthesize(string name, params Expr[] exprs)
         {
             string s = $"({name}";
