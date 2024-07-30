@@ -102,10 +102,17 @@ namespace interpreter
             {
                 Console.WriteLine(printer.Print(s!));
             }*/
-            Option value = interpreter.Interpret(statements);
-            if (value.GetType() == typeof(Some))
+            try
             {
-                Console.WriteLine(((Some)value).Content);
+                Option value = interpreter.Interpret(statements);
+                if (value.GetType() == typeof(Some))
+                {
+                    Console.WriteLine(((Some)value).Content);
+                }
+            }
+            catch (RuntimeException)
+            {
+                return;
             }
         }
     }
