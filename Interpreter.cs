@@ -372,5 +372,10 @@ namespace interpreter
             }
             throw new Return(value);
         }
+
+        public Option Visit(Expr.AnonymousFn expr)
+        {
+            return new Some(new LoxAnonymousFunction(expr, Env));
+        }
     }
 }

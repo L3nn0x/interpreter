@@ -58,7 +58,8 @@ if __name__ == "__main__":
         "Grouping: Expr Expression",
         "Literal : object? Value",
         "Unary   : Token Op, Expr Right",
-        "Variable: Token name"
+        "Variable: Token name",
+        "AnonymousFn: List<Token> args, List<Stmt> body",
     ])
     define_ast(dir, "Stmt", [
         "Block      : List<Stmt> statements",

@@ -67,7 +67,7 @@ namespace interpreter
             Expr? expr = null;
             if (Match(TokenType.EQUAL))
             {
-                expr = Expression();
+                expr = Expression(); // TODO functions are expressions?
             }
             Consume(TokenType.SEMICOLON, "Expected ';' after variable declaration");
             return new Stmt.Var(name, expr);
@@ -419,8 +419,32 @@ namespace interpreter
                 Consume(TokenType.RIGHT_PAREN, "Expected ')' after expression");
                 return new Expr.Grouping(expr);
             }
+            if (Match(TokenType.FUN))
+            {
+                return AnonymousFunction();
+            }
 
             throw Error(Peek(), "Expected expression.");
+        }
+
+        private Expr AnonymousFunction()
+        {
+            Consume(TokenType.LEFT_PAREN, $"Expected '(' after <anonymous>.");
+            List<Token> parameters = [];
+            if (!Check(TokenType.RIGHT_PAREN))
+            {
+                do
+                {
+                    if (parameters.Count > 254)
+                    {
+                        Error(Peek(), "Cannot have more than 255 parameters.");
+                    }
+                    parameters.Add(Consume(TokenType.IDENTIFIER, "Expected parameter name"));
+                } while (Match(TokenType.COMMA));
+            }
+            Consume(TokenType.RIGHT_PAREN, "Expected ')' after parameters");
+            Consume(TokenType.LEFT_BRACE, $"Expected '{{' before <anonymous> body.");
+            return new Expr.AnonymousFn(parameters, Block(false));
         }
 
         private void Synchronize()

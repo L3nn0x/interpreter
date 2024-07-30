@@ -124,6 +124,21 @@ namespace interpreter
             return $"(RET {(stmt.value == null ? stmt.value!.Accept(this) : "nil")})";
         }
 
+        public string Visit(Expr.AnonymousFn expr)
+        {
+            string args = "";
+            foreach (var arg in expr.args)
+            {
+                args += " " + arg.lexeme;
+            }
+            string stmts = "";
+            foreach (var s in expr.body)
+            {
+                stmts += " " + s.Accept(this);
+            }
+            return $"(FUN <anonymous> ARGS {args} BODY {stmts})";
+        }
+
         string Parenthesize(string name, params Expr[] exprs)
         {
             string s = $"({name}";
