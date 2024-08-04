@@ -11,21 +11,47 @@ namespace interpreter
         private Environment? Enclosing = null;
         private Dictionary<string, object?> Values = [];
 
-        public void Define(string name, object? value)
+        public void Define(Token name, object? value)
         {
-            Values.Add(name, value);
+            try
+            {
+                Values.Add(name.lexeme, value);
+            }
+            catch (ArgumentException)
+            {
+                throw new RuntimeException(name, "Variable already exists");
+            }
         }
 
         public object? Get(Token name)
         {
-            bool contains = Values.TryGetValue(name.lexeme, out var value);
-            if (contains)
-            {
-                return value;
-            }
+            var (found, value) = GetInternal(name);
+            if (found) return value;
             if (Enclosing != null) return Enclosing.Get(name);
 
             throw new RuntimeException(name, $"Undefined variable '{name.lexeme}'");
+        }
+
+        private (bool, object?) GetInternal(Token name)
+        {
+            bool contains = Values.TryGetValue(name.lexeme, out var value);
+            if (contains)
+            {
+                return (true, value);
+            }
+            return (false, null);
+        }
+
+        public object? GetAt(Token name, int distance)
+        {
+            if (distance == 0 || Enclosing == null)
+            {
+                var (found, value) = GetInternal(name);
+                if (!found)
+                    throw new RuntimeException(name, $"Undefined variable '{name.lexeme}'");
+                return value;
+            }
+            return Enclosing.GetAt(name, distance - 1);
         }
 
         public void Assign(Token name, object? value)
@@ -45,6 +71,23 @@ namespace interpreter
                     throw new RuntimeException(name, $"Undefined variable '{name.lexeme}'");
                 }
             }
+        }
+
+        public void AssignAt(int distance, Token name, object? value)
+        {
+            if (distance == 0 || Enclosing == null)
+            {
+                if (Values.ContainsKey(name.lexeme))
+                {
+                    Values[name.lexeme] = value;
+                }
+                else
+                {
+                    throw new RuntimeException(name, $"Undefined variable '{name.lexeme}'");
+                }
+                return;
+            }
+            Enclosing.AssignAt(distance - 1, name, value);
         }
     }
 }

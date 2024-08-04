@@ -19,7 +19,7 @@ namespace interpreter
             Environment env = new(closure);
             for (int i = 0; i < args.Count; ++i)
             {
-                env.Define(Declaration.args[i].lexeme, args[i]);
+                env.Define(Declaration.args[i], args[i]);
             }
             try
             {
@@ -45,7 +45,7 @@ namespace interpreter
             Environment env = new(closure);
             for (int i = 0; i < args.Count; ++i)
             {
-                env.Define(Declaration.args[i].lexeme, args[i]);
+                env.Define(Declaration.args[i], args[i]);
             }
             try
             {

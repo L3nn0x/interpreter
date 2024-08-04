@@ -8,6 +8,8 @@ namespace interpreter
 
         static private Interpreter interpreter = new();
 
+        static private Resolver resolver = new(interpreter);
+
         static void Main(string[] args)
         {
             if (args.Length > 2)
@@ -93,6 +95,11 @@ namespace interpreter
             {
                 return;
             }
+            if (HadError)
+            {
+                return;
+            }
+            resolver.Resolve(statements);
             if (HadError)
             {
                 return;

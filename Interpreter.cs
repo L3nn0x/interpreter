@@ -17,11 +17,31 @@ namespace interpreter
         private Environment Globals = new();
         private Environment Env;
 
+        private Dictionary<Expr, int> locals = [];
+
         public Interpreter()
         {
-            Globals.Define("clock", new Clock());
-            Globals.Define("input", new Input());
+            Globals.Define(new Token(TokenType.FUN, "clock", null, 0), new Clock());
+            Globals.Define(new Token(TokenType.FUN, "input", null, 0), new Input());
             Env = new(Globals);
+        }
+
+        public void Resolve(Expr expr, int depth)
+        {
+            locals[expr] = depth;
+        }
+
+        private object? LookupVariable(Token name, Expr expr)
+        {
+            try
+            {
+                int distance = locals[expr];
+                return Env.GetAt(name, distance);
+            }
+            catch (KeyNotFoundException)
+            {
+                return Globals.Get(name);
+            }
         }
 
         public Option Interpret(List<Stmt?> statements)
@@ -200,7 +220,7 @@ namespace interpreter
 
         public Option Visit(Expr.Variable expr)
         {
-            return new Some(Env.Get(expr.name));
+            return new Some(LookupVariable(expr.name, expr));
         }
 
         public Option Visit(Stmt.Var stmt)
@@ -212,7 +232,7 @@ namespace interpreter
             }
             if (value is Some some)
             {
-                Env.Define(stmt.name.lexeme, some.Content);
+                Env.Define(stmt.name, some.Content);
             }
             else
             {
@@ -226,6 +246,15 @@ namespace interpreter
             Option value = Evaluate(expr.value);
             if (value is Some some)
             {
+                try
+                {
+                    int distance = locals[expr];
+                    Env.AssignAt(distance, expr.name, value);
+                }
+                catch (KeyNotFoundException)
+                {
+                    Globals.Assign(expr.name, some.Content);
+                }
                 Env.Assign(expr.name, some.Content);
                 return value;
             }
@@ -359,7 +388,7 @@ namespace interpreter
         public Option Visit(Stmt.Function stmt)
         {
             LoxFunction func = new(stmt, Env);
-            Env.Define(stmt.name.lexeme, func);
+            Env.Define(stmt.name, func);
             return None.Value;
         }
 
