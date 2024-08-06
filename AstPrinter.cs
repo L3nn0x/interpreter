@@ -139,6 +139,33 @@ namespace interpreter
             return $"(FUN <anonymous> ARGS {args} BODY {stmts})";
         }
 
+        public string Visit(Stmt.Class stmt)
+        {
+            string out_var = $"(CLASS {stmt.name.lexeme}";
+
+            foreach (var method in stmt.methods)
+            {
+                out_var += " " + method.Accept(this);
+            }
+
+            return out_var + ")";
+        }
+
+        public string Visit(Expr.Get expr)
+        {
+            return $"(GET {expr.name.lexeme} {expr.obj.Accept(this)})";
+        }
+
+        public string Visit(Expr.Set expr)
+        {
+            return $"(SET {expr.name.lexeme} {expr.obj.Accept(this)})";
+        }
+
+        public string Visit(Expr.This expr)
+        {
+            return "(THIS)";
+        }
+
         string Parenthesize(string name, params Expr[] exprs)
         {
             string s = $"({name}";

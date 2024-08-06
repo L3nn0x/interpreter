@@ -2,9 +2,19 @@ using System.Collections;
 using Ast;
 namespace interpreter
 {
-    class RuntimeException(Token token, string message) : Exception(message)
+    class RuntimeException : Exception
     {
-        public Token Token = token;
+        public Token? Token;
+
+        public RuntimeException(Token token, string message) : base(message)
+        {
+            Token = token;
+        }
+
+        public RuntimeException(string message) : base(message)
+        {
+            Token = null;
+        }
     }
 
     class Return(Option value) : Exception
@@ -12,7 +22,7 @@ namespace interpreter
         public readonly Option Value = value;
     }
 
-    class Interpreter : Expr.IVisitor<Option>, Stmt.IVisitor<Option>
+    public class Interpreter : Expr.IVisitor<Option>, Stmt.IVisitor<Option>
     {
         private Environment Globals = new();
         private Environment Env;
@@ -387,7 +397,7 @@ namespace interpreter
 
         public Option Visit(Stmt.Function stmt)
         {
-            LoxFunction func = new(stmt, Env);
+            LoxFunction func = new(stmt, Env, false);
             Env.Define(stmt.name, func);
             return None.Value;
         }
@@ -405,6 +415,62 @@ namespace interpreter
         public Option Visit(Expr.AnonymousFn expr)
         {
             return new Some(new LoxAnonymousFunction(expr, Env));
+        }
+
+        public Option Visit(Stmt.Class stmt)
+        {
+            Env.Define(stmt.name, null);
+
+            Dictionary<string, LoxFunction> methods = [];
+            foreach (var method in stmt.methods)
+            {
+                LoxFunction function = new(method, Env, method.name.lexeme == "init");
+                methods[method.name.lexeme] = function;
+            }
+
+            LoxClass node = new(stmt.name.lexeme, methods);
+            Env.Assign(stmt.name, node);
+            return None.Value;
+        }
+
+        public Option Visit(Expr.Get expr)
+        {
+            Option left = Evaluate(expr.obj);
+            if (left is Some some)
+            {
+                if (some.Content is LoxInstance instance)
+                {
+                    return new Some(instance.Get(expr.name));
+                }
+            }
+            throw new RuntimeException(expr.name, "Only instances have properties");
+        }
+
+        public Option Visit(Expr.Set expr)
+        {
+            Option obj = Evaluate(expr.obj);
+            if (obj is Some some)
+            {
+                if (some.Content is LoxInstance instance)
+                {
+                    Option value = Evaluate(expr.value);
+                    if (value is Some some_value)
+                    {
+                        instance.Set(expr.name, some_value.Content);
+                        return value;
+                    }
+                    else
+                    {
+                        throw new RuntimeException(expr.name, "Cannot assign void to property");
+                    }
+                }
+            }
+            throw new RuntimeException(expr.name, "Only instances have properties");
+        }
+
+        public Option Visit(Expr.This expr)
+        {
+            return new Some(LookupVariable(expr.keyword, expr));
         }
     }
 }

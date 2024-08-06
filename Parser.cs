@@ -23,6 +23,10 @@ namespace interpreter
         {
             try
             {
+                if (Match(TokenType.CLASS))
+                {
+                    return ClassDeclaration();
+                }
                 if (Match(TokenType.FUN))
                 {
                     return Function("function");
@@ -38,6 +42,20 @@ namespace interpreter
                 Synchronize();
                 return null;
             }
+        }
+
+        private Stmt ClassDeclaration()
+        {
+            Token name = Consume(TokenType.IDENTIFIER, "Expected class name.");
+            Consume(TokenType.LEFT_BRACE, "Expected { before class body.");
+
+            List<Stmt.Function> methods = [];
+            while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
+            {
+                methods.Add((Stmt.Function)Function("method"));
+            }
+            Consume(TokenType.RIGHT_BRACE, "Expected } after class body.");
+            return new Stmt.Class(name, methods);
         }
 
         private Stmt Function(string kind)
@@ -272,6 +290,11 @@ namespace interpreter
                     Token name = ((Expr.Variable)expr).name;
                     return new Expr.Assign(name, value);
                 }
+                else if (expr.GetType() == typeof(Expr.Get))
+                {
+                    Expr.Get get = (Expr.Get)expr;
+                    return new Expr.Set(get.obj, get.name, value);
+                }
                 Error(equals, "Invalid assignment target");
             }
             return expr;
@@ -377,6 +400,11 @@ namespace interpreter
                 {
                     expr = FinishCall(expr);
                 }
+                else if (Match(TokenType.DOT))
+                {
+                    Token name = Consume(TokenType.IDENTIFIER, "expected property name afte r '.'.");
+                    expr = new Expr.Get(expr, name);
+                }
                 else
                 {
                     break;
@@ -412,6 +440,7 @@ namespace interpreter
             {
                 return new Expr.Literal(Previous().literal);
             }
+            if (Match(TokenType.THIS)) return new Expr.This(Previous());
             if (Match(TokenType.IDENTIFIER)) return new Expr.Variable(Previous());
             if (Match(TokenType.LEFT_PAREN))
             {

@@ -23,18 +23,30 @@ namespace interpreter
             }
         }
 
+        public void Define(string name, object? value)
+        {
+            try
+            {
+                Values.Add(name, value);
+            }
+            catch (ArgumentException)
+            {
+                throw new RuntimeException($"Variable {name} already exists");
+            }
+        }
+
         public object? Get(Token name)
         {
-            var (found, value) = GetInternal(name);
+            var (found, value) = GetInternal(name.lexeme);
             if (found) return value;
             if (Enclosing != null) return Enclosing.Get(name);
 
             throw new RuntimeException(name, $"Undefined variable '{name.lexeme}'");
         }
 
-        private (bool, object?) GetInternal(Token name)
+        private (bool, object?) GetInternal(string name)
         {
-            bool contains = Values.TryGetValue(name.lexeme, out var value);
+            bool contains = Values.TryGetValue(name, out var value);
             if (contains)
             {
                 return (true, value);
@@ -46,9 +58,21 @@ namespace interpreter
         {
             if (distance == 0 || Enclosing == null)
             {
-                var (found, value) = GetInternal(name);
+                var (found, value) = GetInternal(name.lexeme);
                 if (!found)
                     throw new RuntimeException(name, $"Undefined variable '{name.lexeme}'");
+                return value;
+            }
+            return Enclosing.GetAt(name, distance - 1);
+        }
+
+        public object? GetAt(string name, int distance)
+        {
+            if (distance == 0 || Enclosing == null)
+            {
+                var (found, value) = GetInternal(name);
+                if (!found)
+                    throw new RuntimeException($"Undefined variable '{name}'");
                 return value;
             }
             return Enclosing.GetAt(name, distance - 1);

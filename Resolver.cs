@@ -4,8 +4,16 @@ namespace interpreter
     enum FunctionType
     {
         NONE,
-        FUNCTION
-    };
+        FUNCTION,
+        METHOD,
+        INITIALIZER
+    }
+
+    enum ClassType
+    {
+        NONE,
+        CLASS
+    }
 
     class Resolver : Expr.IVisitor<Void>, Stmt.IVisitor<Void>
     {
@@ -13,6 +21,7 @@ namespace interpreter
         private Stack<Dictionary<string, bool>> scopes = new();
 
         private FunctionType currentFunction = FunctionType.NONE;
+        private ClassType currentClass = ClassType.NONE;
 
         bool? GetValueOrNull<K>(Dictionary<K, bool> dict, K key) where K : notnull
         {
@@ -209,7 +218,14 @@ namespace interpreter
             {
                 Program.Error(stmt.keyword, "Can't return from top-level code");
             }
-            if (stmt.value != null) Resolve(stmt.value);
+            if (stmt.value != null)
+            {
+                if (currentFunction == FunctionType.INITIALIZER)
+                {
+                    Program.Error(stmt.keyword, "Can't return a value from an initializer");
+                }
+                Resolve(stmt.value);
+            }
             return Void.unit;
         }
 
@@ -238,6 +254,47 @@ namespace interpreter
 
         public Void Visit(Stmt.Continue stmt)
         {
+            return Void.unit;
+        }
+
+        public Void Visit(Stmt.Class stmt)
+        {
+            Declare(stmt.name);
+            Define(stmt.name.lexeme);
+            BeginScope();
+            ClassType old_class = currentClass;
+            currentClass = ClassType.CLASS;
+            scopes.Peek().Add("this", true);
+            foreach (var method in stmt.methods)
+            {
+                ResolveFunction(method, method.name.lexeme == "init" ? FunctionType.INITIALIZER : FunctionType.METHOD);
+            }
+            currentClass = old_class;
+            EndScope();
+            return Void.unit;
+        }
+
+        public Void Visit(Expr.Get expr)
+        {
+            Resolve(expr.obj);
+            return Void.unit;
+        }
+
+        public Void Visit(Expr.Set expr)
+        {
+            Resolve(expr.value);
+            Resolve(expr.obj);
+            return Void.unit;
+        }
+
+        public Void Visit(Expr.This expr)
+        {
+            if (currentClass == ClassType.NONE)
+            {
+                Program.Error(expr.keyword, "Can't use 'this' outside of a class");
+                return Void.unit;
+            }
+            ResolveLocal(expr, expr.keyword);
             return Void.unit;
         }
     }
