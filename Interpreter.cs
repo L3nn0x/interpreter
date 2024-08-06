@@ -419,7 +419,27 @@ namespace interpreter
 
         public Option Visit(Stmt.Class stmt)
         {
+            Option superclass_opt = None.Value;
+            LoxClass? superclass = null;
+            if (stmt.superclass != null)
+            {
+                superclass_opt = Evaluate(stmt.superclass);
+                if (superclass_opt is Some some)
+                {
+                    if (some.Content == null || some.Content.GetType() != typeof(LoxClass))
+                    {
+                        throw new RuntimeException(stmt.superclass.name, "Superclass must be a class");
+                    }
+                    superclass = (LoxClass)some.Content;
+                }
+            }
             Env.Define(stmt.name, null);
+
+            if (stmt.superclass != null)
+            {
+                Env = new Environment(Env);
+                Env.Define("super", superclass);
+            }
 
             Dictionary<string, LoxFunction> methods = [];
             foreach (var method in stmt.methods)
@@ -428,7 +448,11 @@ namespace interpreter
                 methods[method.name.lexeme] = function;
             }
 
-            LoxClass node = new(stmt.name.lexeme, methods);
+            LoxClass node = new(stmt.name.lexeme, superclass, methods);
+            if (stmt.superclass != null)
+            {
+                Env = Env.Enclosing!;
+            }
             Env.Assign(stmt.name, node);
             return None.Value;
         }
@@ -471,6 +495,26 @@ namespace interpreter
         public Option Visit(Expr.This expr)
         {
             return new Some(LookupVariable(expr.keyword, expr));
+        }
+
+        public Option Visit(Expr.Super expr)
+        {
+            int distance = locals[expr];
+            LoxClass? superclass = (LoxClass?)Env.GetAt("super", distance);
+            LoxInstance? instance = (LoxInstance?)Env.GetAt("this", distance - 1);
+            if (superclass != null && instance != null)
+            {
+                LoxFunction? method = superclass.FindMethod(expr.method.lexeme);
+                if (method != null)
+                {
+                    return new Some(method.Bind(instance));
+                }
+                else
+                {
+                    throw new RuntimeException(expr.method, "Method not found in superclass.");
+                }
+            }
+            throw new RuntimeException(expr.keyword, "Cannot invoke super on null superclass or null instance.");
         }
     }
 }

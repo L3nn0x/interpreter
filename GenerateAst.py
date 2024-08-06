@@ -57,6 +57,7 @@ if __name__ == "__main__":
         "Get     : Expr obj, Token name",
         "Logical : Expr left, Token op, Expr right",
         "Set     : Expr obj, Token name, Expr value",
+        "Super   : Token keyword, Token method",
         "This    : Token keyword",
         "Grouping: Expr Expression",
         "Literal : object? Value",
@@ -66,7 +67,7 @@ if __name__ == "__main__":
     ])
     define_ast(dir, "Stmt", [
         "Block      : List<Stmt> statements",
-        "Class      : Token name, List<Stmt.Function> methods",
+        "Class      : Token name, Expr.Variable? superclass, List<Stmt.Function> methods",
         "Expression : Expr expression",
         "Function   : Token name, List<Token> args, List<Stmt> body",
         "If         : Expr condition, Stmt then_branch, Stmt? else_branch",

@@ -1,14 +1,25 @@
 
 namespace interpreter
 {
-    public class LoxClass(string name, Dictionary<string, LoxFunction> methods) : LoxCallable
+    public class LoxClass(string name, LoxClass? superclass, Dictionary<string, LoxFunction> methods) : LoxCallable
     {
         public readonly string Name = name;
+        public readonly LoxClass? Superclass = superclass;
         public readonly Dictionary<string, LoxFunction> Methods = methods;
+
+        public LoxFunction? FindMethod(string name)
+        {
+            LoxFunction? result = Methods.TryGetValue(name, out var method) ? method : null;
+            if (result == null && Superclass != null)
+            {
+                return Superclass.FindMethod(name);
+            }
+            return result;
+        }
 
         public int Arity()
         {
-            LoxFunction? initializer = Methods.TryGetValue("init", out var method) ? method : null;
+            LoxFunction? initializer = FindMethod("init");
             if (initializer != null)
             {
                 return initializer.Arity();
@@ -18,7 +29,7 @@ namespace interpreter
         public Option CallFunction(Interpreter interpreter, List<object?> args)
         {
             LoxInstance instance = new(this);
-            LoxFunction? initializer = Methods.TryGetValue("init", out var method) ? method : null;
+            LoxFunction? initializer = FindMethod("init");
             if (initializer != null)
             {
                 initializer.Bind(instance).CallFunction(interpreter, args);
@@ -39,7 +50,7 @@ namespace interpreter
 
         public LoxFunction? FindFunction(string name)
         {
-            LoxFunction? f = klass.Methods.TryGetValue(name, out var method) ? method : null;
+            LoxFunction? f = klass.FindMethod(name);
             if (f != null)
             {
                 return f.Bind(this);

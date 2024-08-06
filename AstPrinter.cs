@@ -166,6 +166,11 @@ namespace interpreter
             return "(THIS)";
         }
 
+        public string Visit(Expr.Super expr)
+        {
+            return $"(SUPER {expr.method.lexeme})";
+        }
+
         string Parenthesize(string name, params Expr[] exprs)
         {
             string s = $"({name}";

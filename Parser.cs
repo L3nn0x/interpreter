@@ -47,6 +47,12 @@ namespace interpreter
         private Stmt ClassDeclaration()
         {
             Token name = Consume(TokenType.IDENTIFIER, "Expected class name.");
+            Expr.Variable? superclass = null;
+            if (Match(TokenType.LESS))
+            {
+                Consume(TokenType.IDENTIFIER, "Expected superclass name.");
+                superclass = new Expr.Variable(Previous());
+            }
             Consume(TokenType.LEFT_BRACE, "Expected { before class body.");
 
             List<Stmt.Function> methods = [];
@@ -55,7 +61,7 @@ namespace interpreter
                 methods.Add((Stmt.Function)Function("method"));
             }
             Consume(TokenType.RIGHT_BRACE, "Expected } after class body.");
-            return new Stmt.Class(name, methods);
+            return new Stmt.Class(name, superclass, methods);
         }
 
         private Stmt Function(string kind)
@@ -439,6 +445,13 @@ namespace interpreter
             if (Match(TokenType.NUMBER, TokenType.STRING))
             {
                 return new Expr.Literal(Previous().literal);
+            }
+            if (Match(TokenType.SUPER))
+            {
+                Token keyword = Previous();
+                Consume(TokenType.DOT, "Expected '.' after 'super'.");
+                Token method = Consume(TokenType.IDENTIFIER, "Expected method name after 'super.'.");
+                return new Expr.Super(keyword, method);
             }
             if (Match(TokenType.THIS)) return new Expr.This(Previous());
             if (Match(TokenType.IDENTIFIER)) return new Expr.Variable(Previous());

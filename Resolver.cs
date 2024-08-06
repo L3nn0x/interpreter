@@ -12,7 +12,8 @@ namespace interpreter
     enum ClassType
     {
         NONE,
-        CLASS
+        CLASS,
+        SUBCLASS,
     }
 
     class Resolver : Expr.IVisitor<Void>, Stmt.IVisitor<Void>
@@ -261,9 +262,19 @@ namespace interpreter
         {
             Declare(stmt.name);
             Define(stmt.name.lexeme);
+            if (stmt.superclass != null)
+            {
+                if (stmt.name.lexeme == stmt.superclass.name.lexeme)
+                {
+                    Program.Error(stmt.superclass.name, "A class cannot inherit from itself");
+                }
+                Resolve(stmt.superclass);
+                BeginScope();
+                scopes.Peek()["super"] = true;
+            }
             BeginScope();
             ClassType old_class = currentClass;
-            currentClass = ClassType.CLASS;
+            currentClass = stmt.superclass == null ? ClassType.CLASS : ClassType.SUBCLASS;
             scopes.Peek().Add("this", true);
             foreach (var method in stmt.methods)
             {
@@ -271,6 +282,10 @@ namespace interpreter
             }
             currentClass = old_class;
             EndScope();
+            if (stmt.superclass != null)
+            {
+                EndScope();
+            }
             return Void.unit;
         }
 
@@ -293,6 +308,20 @@ namespace interpreter
             {
                 Program.Error(expr.keyword, "Can't use 'this' outside of a class");
                 return Void.unit;
+            }
+            ResolveLocal(expr, expr.keyword);
+            return Void.unit;
+        }
+
+        public Void Visit(Expr.Super expr)
+        {
+            if (currentClass == ClassType.NONE)
+            {
+                Program.Error(expr.keyword, "Cannot call super outside of a class.");
+            }
+            else if (currentClass == ClassType.CLASS)
+            {
+                Program.Error(expr.keyword, "Cannot call super on a class without parent.");
             }
             ResolveLocal(expr, expr.keyword);
             return Void.unit;

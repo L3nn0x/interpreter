@@ -8,7 +8,7 @@ namespace interpreter
             Enclosing = parent;
         }
 
-        private Environment? Enclosing = null;
+        public Environment? Enclosing = null;
         private Dictionary<string, object?> Values = [];
 
         public void Define(Token name, object? value)
